@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Director Command Center | Cable Network Solutions</title>
+    
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --text: #f8fafc;
+            --urgent: #ef4444;
+            --warning: #eab308;
+            --safe: #22c55e;
+            --accent: #3b82f6;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container { max-width: 900px; width: 100%; }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 0;
+            border-bottom: 1px solid #334155;
+            margin-bottom: 30px;
+        }
+
+        #status-clock { font-family: monospace; color: var(--accent); font-weight: bold; }
+
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+        }
+
+        h2 { border-left: 4px solid var(--accent); padding-left: 10px; font-size: 1.1rem; margin-top: 0; }
+
+        /* COMPLIANCE TRAFFIC LIGHTS */
+        .compliance-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 12px;
+            background: #0f172a;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+
+        .status-light {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #475569;
+            flex-shrink: 0;
+        }
+
+        .light-green { background: var(--safe); box-shadow: 0 0 12px var(--safe); }
+        .light-yellow { background: var(--warning); box-shadow: 0 0 12px var(--warning); }
+        .light-red { background: var(--urgent); box-shadow: 0 0 12px var(--urgent); animation: blink 1.5s infinite; }
+
+        @keyframes blink { 50% { opacity: 0.4; } }
+
+        .info strong { display: block; font-size: 0.9rem; }
+        .info p { margin: 2px 0 0; font-size: 0.75rem; color: #94a3b8; }
+
+        /* ACTIONS & BUTTONS */
+        .btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            width: 100%;
+            font-weight: bold;
+        }
+
+        #toast {
+            position: fixed;
+            bottom: 20px;
+            background: var(--accent);
+            padding: 12px 24px;
+            border-radius: 50px;
+            display: none;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <div>
+                <h1 style="margin:0; font-size: 1.5rem;">CNS Director Portal</h1>
+                <small style="color: #94a3b8;">Cable Network Solutions Ltd.</small>
+            </div>
+            <div id="status-clock">Loading...</div>
+        </header>
+
+        <div class="grid-container">
+            <section class="card">
+                <h2>Compliance Radar</h2>
+                <div class="compliance-item">
+                    <div class="status-light" id="zra-light"></div>
+                    <div class="info">
+                        <strong>ZRA Smart Invoice</strong>
+                        <p id="zra-desc">Calculating sync...</p>
+                    </div>
+                </div>
+                <div class="compliance-item">
+                    <div class="status-light" id="pacra-light"></div>
+                    <div class="info">
+                        <strong>PACRA Annual Return</strong>
+                        <p id="pacra-desc">Loading deadline...</p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="card">
+                <h2>Upcoming Meetings</h2>
+                <div style="background: #0f172a; padding: 15px; border-radius: 8px;">
+                    <p style="margin:0;"><strong>Board Strategy Meeting</strong></p>
+                    <p style="font-size: 0.8rem; color: #94a3b8;">Feb 25, 2026 | 09:00 CAT</p>
+                    <button class="btn" onclick="setSmartReminder('Board Strategy')">Activate Reminders</button>
+                </div>
+            </section>
+
+            <section class="card">
+                <h2>Fiber Infrastructure</h2>
+                <p style="font-size: 0.85rem;">Lusaka Metro Phase 3: <strong>78% Complete</strong></p>
+                <div style="background: #334155; height: 8px; border-radius: 10px;">
+                    <div style="background: var(--safe); width: 78%; height: 100%; border-radius: 10px;"></div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <div id="toast">Reminder Activated!</div>
+
+    <script>
+        // 1. Clock locked to Lusaka Time
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('status-clock').innerText = now.toLocaleString('en-GB', { 
+                timeZone: 'Africa/Lusaka',
+                hour: '2-digit', minute: '2-digit', second: '2-digit'
+            }) + " CAT";
+        }
+        setInterval(updateClock, 1000);
+
+        // 2. Traffic Light Compliance Logic
+        function runComplianceCheck() {
+            const today = new Date();
+            const day = today.getDate();
+
+            // ZRA Logic (Due 14th)
+            const zraL = document.getElementById('zra-light');
+            const zraD = document.getElementById('zra-desc');
+            if (day <= 7) {
+                zraL.className = 'status-light light-green';
+                zraD.innerText = "Next filing due in " + (14 - day) + " days.";
+            } else if (day > 7 && day <= 14) {
+                zraL.className = 'status-light light-yellow';
+                zraD.innerText = "Filing window open. Verify now.";
+            } else {
+                zraL.className = 'status-light light-red';
+                zraD.innerText = "URGENT: Verify Monthly Return status!";
+            }
+
+            // PACRA Logic (Mocked for Feb 2026)
+            const pacraL = document.getElementById('pacra-light');
+            const pacraD = document.getElementById('pacra-desc');
+            pacraL.className = 'status-light light-green';
+            pacraD.innerText = "Status: Compliant (Next: March 2026)";
+        }
+
+        // 3. Reminder Trigger
+        function setSmartReminder(name) {
+            const toast = document.getElementById('toast');
+            toast.style.display = 'block';
+            setTimeout(() => { toast.style.display = 'none'; }, 3000);
+            
+            // Native Phone/Desktop Notification
+            if (Notification.permission === "granted") {
+                new Notification("System Armed", { body: `You will be alerted 1 hour before the ${name} meeting.` });
+            } else {
+                Notification.requestPermission();
+            }
+        }
+
+        runComplianceCheck();
+        updateClock();
+    </script>
+</body>
+</html>
