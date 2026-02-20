@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CNS Director | Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #05080f;
+            --surface: #0a1020;
+            --card: #0d1528;
+            --border: rgba(255,255,255,0.06);
+            --border-bright: rgba(41,170,255,0.2);
+            --text: #ddeeff;
+            --muted: #4a6a88;
+            --urgent: #ff2d55;
+            --warning: #ffc600;
+            --safe: #00e5a0;
+            --accent: #29aaff;
+            --accent-dim: rgba(41,170,255,0.1);
+            --manual: #b97cff;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Syne', sans-serif;
+            min-height: 100dvh;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(41,170,255,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(41,170,255,0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Header */
+        .hdr {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            height: 58px;
+            background: rgba(5,8,15,0.95);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 18px;
+            z-index: 100;
+        }
+        .hdr-logo { font-family:'IBM Plex Mono',monospace; font-size:.65rem; font-weight:700; color:var(--accent); letter-spacing:.2em; }
+        .hdr-title { font-size:1rem; font-weight:800; letter-spacing:-0.01em; }
+        .hdr-right {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 2px;
+        }
+        .hdr-date {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.58rem;
+            color: var(--muted);
+            letter-spacing: 0.08em;
+        }
+        .status-dot {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.55rem;
+            color: var(--safe);
+            letter-spacing: 0.1em;
+        }
+        .status-dot::before {
+            content: '';
+            width: 5px; height: 5px;
+            background: var(--safe);
+            border-radius: 50%;
+            box-shadow: 0 0 6px var(--safe);
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        .scroll-area {
+            position: relative;
+            z-index: 1;
+            padding: 74px 14px 110px;
+        }
+
+        /* Hero greeting */
+        .hero {
+            background: linear-gradient(135deg, #0d1528 0%, #091422 100%);
+            border: 1px solid var(--border);
+            border-left: 3px solid var(--accent);
+            border-radius: 14px;
+            padding: 18px 18px 16px;
+            margin-bottom: 0;
+        }
+        .hero-greeting {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.6rem;
+            color: var(--muted);
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            margin-bottom: 6px;
+        }
+        .hero-name {
+            font-size: 1.3rem;
+            font-weight: 800;
+            line-height: 1.1;
+            margin-bottom: 10px;
+        }
+        .hero-name span { color: var(--accent); }
+        .hero-summary {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.65rem;
+            color: var(--muted);
+            line-height: 1.6;
+        }
+        .hero-summary strong { color: var(--text); font-weight: 600; }
+
+        /* Section title */
+        .st {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.58rem;
+            font-weight: 600;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin: 22px 0 10px 2px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .st::after { content:''; flex:1; height:1px; background:var(--border); }
+
+        /* KPI grid */
+        .kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .kpi-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 16px 14px;
+            text-decoration: none;
+            display: block;
+            transition: border-color 0.2s, background 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+        .kpi-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+        }
+        .kpi-card.kp-actions::before  { background: var(--accent); }
+        .kpi-card.kp-meetings::before { background: var(--safe); }
+        .kpi-card.kp-critical::before { background: var(--urgent); }
+        .kpi-card.kp-audit::before    { background: var(--manual); }
+
+        .kpi-card:active { background: rgba(255,255,255,0.02); }
+
+        .kpi-val {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 2rem;
+            font-weight: 700;
+            line-height: 1;
+            margin-bottom: 6px;
+        }
+        .kp-actions  .kpi-val { color: var(--accent); }
+        .kp-meetings .kpi-val { color: var(--safe); }
+        .kp-critical .kpi-val { color: var(--urgent); }
+        .kp-audit    .kpi-val { color: var(--manual); }
+
+        .kpi-label {
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 2px;
+        }
+        .kpi-sub {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.58rem;
+            color: var(--muted);
+        }
+        .kpi-arrow {
+            position: absolute;
+            bottom: 14px; right: 14px;
+            font-size: 0.8rem;
+            color: var(--muted);
+            opacity: 0.4;
+        }
+
+        /* Upcoming meeting banner */
+        .next-meeting {
+            background: rgba(0,229,160,0.06);
+            border: 1px solid rgba(0,229,160,0.2);
+            border-radius: 14px;
+            padding: 14px 16px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        .next-meeting.none {
+            background: var(--card);
+            border-color: var(--border);
+        }
+        .next-icon {
+            font-size: 1.6rem;
+            flex-shrink: 0;
+        }
+        .next-body { flex: 1; min-width: 0; }
+        .next-label {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.55rem;
+            color: var(--safe);
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            margin-bottom: 3px;
+        }
+        .next-meeting.none .next-label { color: var(--muted); }
+        .next-title { font-size: 0.9rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .next-meta {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.62rem;
+            color: var(--muted);
+            margin-top: 3px;
+        }
+        .next-date-badge {
+            background: rgba(0,229,160,0.1);
+            border: 1px solid rgba(0,229,160,0.25);
+            border-radius: 10px;
+            padding: 8px 12px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+        .next-date-badge .nd { font-family:'IBM Plex Mono',monospace; font-size:1.2rem; font-weight:700; color:var(--safe); line-height:1; }
+        .next-date-badge .nm { font-family:'IBM Plex Mono',monospace; font-size:0.5rem; text-transform:uppercase; color:var(--muted); margin-top:3px; letter-spacing:0.1em; }
+
+        /* Critical actions strip */
+        .crit-strip {
+            background: rgba(255,45,85,0.05);
+            border: 1px solid rgba(255,45,85,0.15);
+            border-radius: 14px;
+            overflow: hidden;
+        }
+        .crit-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 16px;
+            border-bottom: 1px solid rgba(255,45,85,0.1);
+        }
+        .crit-item:last-child { border-bottom: none; }
+        .crit-dot { width:8px; height:8px; border-radius:50%; background:var(--urgent); box-shadow:0 0 6px var(--urgent); flex-shrink:0; }
+        .crit-text { font-size: 0.85rem; font-weight: 600; flex: 1; }
+        .crit-owner { font-family:'IBM Plex Mono',monospace; font-size:0.58rem; color:var(--muted); }
+
+        /* Recent activity */
+        .activity-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            overflow: hidden;
+        }
+        .ae {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+            animation: fadeIn 0.25s ease both;
+        }
+        .ae:last-child { border-bottom: none; }
+        @keyframes fadeIn { from{opacity:0;transform:translateX(-4px);} to{opacity:1;transform:translateX(0);} }
+
+        .ldot { width:8px; height:8px; border-radius:50%; margin-top:5px; flex-shrink:0; }
+        .ae-body { flex: 1; min-width: 0; }
+        .ae-text { font-size:0.83rem; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .ae-time { font-family:'IBM Plex Mono',monospace; font-size:0.6rem; color:var(--muted); margin-top:3px; }
+        .ae-type {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.5rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            padding: 2px 6px;
+            border-radius: 4px;
+            flex-shrink: 0;
+            margin-top: 3px;
+        }
+        .type-Action  { background:rgba(41,170,255,0.12); color:var(--accent); }
+        .type-Meeting { background:rgba(0,229,160,0.1); color:var(--safe); }
+        .type-Manual  { background:rgba(185,124,255,0.1); color:var(--manual); }
+
+        /* Quick nav */
+        .quick-nav { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .qn-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 16px;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: border-color 0.2s, background 0.2s;
+        }
+        .qn-card:active { background: rgba(255,255,255,0.02); border-color: var(--accent); }
+        .qn-ico { font-size: 1.4rem; flex-shrink: 0; }
+        .qn-label { font-size: 0.85rem; font-weight: 700; color: var(--text); }
+        .qn-sub { font-family:'IBM Plex Mono',monospace; font-size:0.58rem; color:var(--muted); margin-top:2px; }
+        .qn-arrow { margin-left: auto; color: var(--muted); opacity: 0.4; font-size: 1rem; }
+
+        /* Empty */
+        .empty-msg {
+            text-align: center;
+            padding: 20px;
+            color: var(--muted);
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.72rem;
+        }
+
+        /* Nav */
+        .bnav {
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            background: rgba(5,8,15,0.97);
+            backdrop-filter: blur(20px);
+            border-top: 1px solid var(--border);
+            display: flex;
+            padding: 8px 0 max(8px, env(safe-area-inset-bottom));
+            z-index: 100;
+        }
+        .nv {
+            flex: 1;
+            text-align: center;
+            color: var(--muted);
+            text-decoration: none;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.55rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            padding: 4px 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 3px;
+            transition: color 0.2s;
+        }
+        .nv .ico { font-size: 1.1rem; }
+        .nv.active { color: var(--accent); }
+    </style>
+</head>
+<body>
+
+<div class="hdr">
+    <div>
+        <div class="hdr-logo">CNS Portal</div>
+        <div class="hdr-title">Director's Brief</div>
+    </div>
+    <div class="hdr-right">
+        <div class="hdr-date" id="hdr-date"></div>
+        <div class="status-dot">LIVE</div>
+    </div>
+</div>
+
+<div class="scroll-area">
+
+    <!-- Hero -->
+    <div class="hero">
+        <div class="hero-greeting">Good <span id="time-of-day">morning</span></div>
+        <div class="hero-name">Director's <span>Brief</span></div>
+        <div class="hero-summary" id="hero-summary">Loading operational status…</div>
+    </div>
+
+    <!-- KPIs -->
+    <div class="st">Operational Overview</div>
+    <div class="kpi-grid">
+        <a href="action.html" class="kpi-card kp-actions">
+            <div class="kpi-val" id="count-actions">0</div>
+            <div class="kpi-label">Pending Tasks</div>
+            <div class="kpi-sub" id="kpi-sub-actions">—</div>
+            <span class="kpi-arrow">›</span>
+        </a>
+        <a href="meetings.html" class="kpi-card kp-meetings">
+            <div class="kpi-val" id="count-meetings">0</div>
+            <div class="kpi-label">Meetings</div>
+            <div class="kpi-sub" id="kpi-sub-meetings">—</div>
+            <span class="kpi-arrow">›</span>
+        </a>
+        <a href="action.html" class="kpi-card kp-critical">
+            <div class="kpi-val" id="count-critical">0</div>
+            <div class="kpi-label">Critical</div>
+            <div class="kpi-sub">Urgent actions</div>
+            <span class="kpi-arrow">›</span>
+        </a>
+        <a href="audit.html" class="kpi-card kp-audit">
+            <div class="kpi-val" id="count-audit">0</div>
+            <div class="kpi-label">Log Entries</div>
+            <div class="kpi-sub">Total recorded</div>
+            <span class="kpi-arrow">›</span>
+        </a>
+    </div>
+
+    <!-- Next Meeting -->
+    <div class="st">Next Meeting</div>
+    <div id="next-meeting-card"></div>
+
+    <!-- Critical Actions -->
+    <div id="critical-section" style="display:none;">
+        <div class="st">Critical Actions</div>
+        <div class="crit-strip" id="critical-list"></div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="st">Recent Activity</div>
+    <div class="activity-card" id="dash-audit"></div>
+
+    <!-- Quick Nav -->
+    <div class="st">Quick Access</div>
+    <div class="quick-nav">
+        <a href="action.html" class="qn-card">
+            <span class="qn-ico">✅</span>
+            <div>
+                <div class="qn-label">Tasks</div>
+                <div class="qn-sub">Action items</div>
+            </div>
+            <span class="qn-arrow">›</span>
+        </a>
+        <a href="meetings.html" class="qn-card">
+            <span class="qn-ico">📅</span>
+            <div>
+                <div class="qn-label">Schedule</div>
+                <div class="qn-sub">Meetings</div>
+            </div>
+            <span class="qn-arrow">›</span>
+        </a>
+        <a href="audit.html" class="qn-card">
+            <span class="qn-ico">🔍</span>
+            <div>
+                <div class="qn-label">Audit Log</div>
+                <div class="qn-sub">Activity trail</div>
+            </div>
+            <span class="qn-arrow">›</span>
+        </a>
+        <a href="meetings.html" class="qn-card">
+            <span class="qn-ico">➕</span>
+            <div>
+                <div class="qn-label">New Meeting</div>
+                <div class="qn-sub">Schedule now</div>
+            </div>
+            <span class="qn-arrow">›</span>
+        </a>
+    </div>
+
+</div>
+
+<nav class="bnav">
+    <a href="dashboard.html" class="nv active"><span class="ico">🏠</span><span>Dash</span></a>
+    <a href="action.html"    class="nv"><span class="ico">✅</span><span>Actions</span></a>
+    <a href="meetings.html"  class="nv"><span class="ico">📅</span><span>Meetings</span></a>
+    <a href="audit.html"     class="nv"><span class="ico">🔍</span><span>Audit</span></a>
+</nav>
+
+<script>
+    function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    function cleanText(raw) {
+        return raw
+            .replace(/^ACTION ADDED:\s*/i, '')
+            .replace(/^ACTION COMPLETED:\s*/i, '')
+            .replace(/^MEETING SCHEDULED:\s*/i, '')
+            .replace(/^MEETING REMOVED:\s*/i, '')
+            .replace(/^MANUAL:\s*/i, '');
+    }
+
+    function updateDashboard() {
+        const auditLog = JSON.parse(localStorage.getItem('auditLog')) || [];
+        const actions  = JSON.parse(localStorage.getItem('actions'))  || [];
+        const meetings = JSON.parse(localStorage.getItem('meetings'))  || [];
+
+        const now = new Date();
+        const todayStr = now.toISOString().split('T')[0];
+        const hour = now.getHours();
+
+        // Header date
+        document.getElementById('hdr-date').textContent =
+            now.toLocaleDateString('en-GB', {weekday:'short', day:'numeric', month:'short'}).toUpperCase();
+
+        // Time of day
+        const tod = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening';
+        document.getElementById('time-of-day').textContent = tod;
+
+        // KPIs
+        const critCount = actions.filter(a => a.prio === 'Critical').length;
+        const highCount = actions.filter(a => a.prio === 'High').length;
+        const upcomingMeetings = meetings.filter(m => m.date >= todayStr).length;
+
+        document.getElementById('count-actions').textContent  = actions.length;
+        document.getElementById('count-meetings').textContent = meetings.length;
+        document.getElementById('count-critical').textContent = critCount;
+        document.getElementById('count-audit').textContent    = auditLog.length;
+
+        document.getElementById('kpi-sub-actions').textContent  =
+            critCount > 0 ? `${critCount} critical` : highCount > 0 ? `${highCount} high prio` : 'All clear';
+        document.getElementById('kpi-sub-meetings').textContent =
+            upcomingMeetings > 0 ? `${upcomingMeetings} upcoming` : 'None scheduled';
+
+        // Hero summary
+        const parts = [];
+        if (actions.length > 0) parts.push(`<strong>${actions.length} active task${actions.length !== 1 ? 's' : ''}</strong>`);
+        if (critCount > 0)       parts.push(`<strong style="color:var(--urgent)">${critCount} critical</strong>`);
+        if (upcomingMeetings > 0) parts.push(`<strong>${upcomingMeetings} upcoming meeting${upcomingMeetings !== 1 ? 's' : ''}</strong>`);
+        document.getElementById('hero-summary').innerHTML =
+            parts.length > 0 ? parts.join(' · ') : 'No pending items. All clear.';
+
+        // Next meeting
+        const sorted = meetings.filter(m => m.date >= todayStr)
+            .sort((a,b) => new Date(a.date) - new Date(b.date));
+        const nmCard = document.getElementById('next-meeting-card');
+        if (sorted.length > 0) {
+            const m = sorted[0];
+            const d = new Date(m.date + 'T12:00:00');
+            const day = String(d.getDate()).padStart(2, '0');
+            const mon = d.toLocaleString('en', {month:'short'}).toUpperCase();
+            const dow = d.toLocaleString('en', {weekday:'long'});
+            const isToday = m.date === todayStr;
+            nmCard.innerHTML = `
+                <div class="next-meeting">
+                    <div class="next-date-badge">
+                        <div class="nd">${day}</div>
+                        <div class="nm">${mon}</div>
+                    </div>
+                    <div class="next-body">
+                        <div class="next-label">${isToday ? '▶ Today' : 'Next Up'}</div>
+                        <div class="next-title">${escHtml(m.title)}</div>
+                        <div class="next-meta">${m.time || '--:--'} · ${dow} · ${m.owner}</div>
+                    </div>
+                </div>`;
+        } else {
+            nmCard.innerHTML = `
+                <div class="next-meeting none">
+                    <div class="next-icon">📅</div>
+                    <div class="next-body">
+                        <div class="next-label">Next Up</div>
+                        <div class="next-title" style="color:var(--muted); font-weight:400;">No upcoming meetings</div>
+                    </div>
+                </div>`;
+        }
+
+        // Critical actions strip
+        const critActions = actions.filter(a => a.prio === 'Critical');
+        const critSection = document.getElementById('critical-section');
+        if (critActions.length > 0) {
+            critSection.style.display = 'block';
+            document.getElementById('critical-list').innerHTML = critActions.slice(0, 3).map(a => `
+                <div class="crit-item">
+                    <div class="crit-dot"></div>
+                    <div class="crit-text">${escHtml(a.text)}</div>
+                    <div class="crit-owner">${a.owner}</div>
+                </div>
+            `).join('');
+        } else {
+            critSection.style.display = 'none';
+        }
+
+        // Recent activity
+        const dau = document.getElementById('dash-audit');
+        if (!auditLog.length) {
+            dau.innerHTML = '<div class="empty-msg">No recent activity</div>';
+        } else {
+            dau.innerHTML = auditLog.slice().reverse().slice(0, 5).map((e, i) => `
+                <div class="ae" style="animation-delay:${i * 0.04}s">
+                    <div class="ldot" style="background:${e.color || 'var(--accent)'}; box-shadow:0 0 5px ${e.color || 'var(--accent)'}40;"></div>
+                    <div class="ae-body">
+                        <div class="ae-text">${escHtml(cleanText(e.text || ''))}</div>
+                        <div class="ae-time">${e.time || '--:--'} · ${e.date}</div>
+                    </div>
+                    <span class="ae-type type-${e.type || 'Manual'}">${e.type || 'LOG'}</span>
+                </div>
+            `).join('');
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', updateDashboard);
+</script>
+
+</body>
+</html>

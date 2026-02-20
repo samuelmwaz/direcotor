@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CNS Director | Meetings</title>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #05080f;
+            --surface: #0a1020;
+            --card: #0d1528;
+            --card2: #081020;
+            --border: rgba(255,255,255,0.06);
+            --border-bright: rgba(41,170,255,0.2);
+            --text: #ddeeff;
+            --muted: #4a6a88;
+            --urgent: #ff2d55;
+            --warning: #ffc600;
+            --safe: #00e5a0;
+            --accent: #29aaff;
+            --accent-dim: rgba(41,170,255,0.1);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Syne', sans-serif;
+            min-height: 100dvh;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(41,170,255,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(41,170,255,0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Header */
+        .hdr {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            height: 58px;
+            background: rgba(5,8,15,0.95);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 18px;
+            z-index: 100;
+        }
+        .hdr-logo {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.65rem;
+            font-weight: 700;
+            color: var(--accent);
+            letter-spacing: 0.2em;
+        }
+        .hdr-title { font-size: 1rem; font-weight: 800; letter-spacing: -0.01em; }
+        .hdr-badge {
+            background: var(--accent-dim);
+            border: 1px solid var(--border-bright);
+            border-radius: 20px;
+            padding: 4px 10px;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.6rem;
+            color: var(--accent);
+            letter-spacing: 0.1em;
+        }
+
+        .scroll-area {
+            position: relative;
+            z-index: 1;
+            padding: 74px 14px 110px;
+        }
+
+        /* Section title */
+        .st {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.58rem;
+            font-weight: 600;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin: 22px 0 10px 2px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .st::after { content:''; flex:1; height:1px; background:var(--border); }
+
+        /* Add Form Card */
+        .add-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-top: 2px solid var(--accent);
+            border-radius: 14px;
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+
+        .fi, .fs {
+            width: 100%;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--text);
+            padding: 13px 14px;
+            margin-bottom: 10px;
+            outline: none;
+            font-family: 'Syne', sans-serif;
+            font-size: 0.9rem;
+            transition: border-color 0.2s;
+            -webkit-appearance: none;
+        }
+        .fi:focus, .fs:focus { border-color: var(--accent); background: rgba(41,170,255,0.04); }
+        .fi::placeholder { color: var(--muted); }
+
+        .row { display: flex; gap: 10px; }
+        .row .fi, .row .fs { margin-bottom: 0; }
+
+        .bpri {
+            width: 100%;
+            background: var(--accent);
+            color: #05080f;
+            border: none;
+            border-radius: 10px;
+            padding: 14px;
+            font-family: 'Syne', sans-serif;
+            font-weight: 800;
+            font-size: 0.9rem;
+            cursor: pointer;
+            margin-top: 10px;
+            letter-spacing: 0.03em;
+            transition: opacity 0.2s, transform 0.1s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .bpri:active { transform: scale(0.98); opacity: 0.85; }
+        .bsec {
+            width: 100%;
+            background: rgba(255,255,255,0.04);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 14px;
+            font-family: 'Syne', sans-serif;
+            font-weight: 700;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .bsec:active { background: rgba(255,255,255,0.08); }
+
+        /* Month group */
+        .month-folder { margin-bottom: 6px; }
+        .month-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 2px;
+            margin-bottom: 8px;
+        }
+        .month-label {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: var(--accent);
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+        }
+        .month-count {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.6rem;
+            background: var(--accent-dim);
+            border: 1px solid var(--border-bright);
+            border-radius: 20px;
+            padding: 2px 8px;
+            color: var(--accent);
+        }
+        .month-line { flex: 1; height: 1px; background: var(--border); }
+
+        /* Meeting row */
+        .meetings-group {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            overflow: hidden;
+            margin-bottom: 16px;
+        }
+
+        .ri {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border);
+            cursor: pointer;
+            transition: background 0.15s;
+            animation: slideIn 0.3s ease both;
+        }
+        .ri:last-child { border-bottom: none; }
+        .ri:hover { background: rgba(255,255,255,0.02); }
+        .ri:active { background: rgba(41,170,255,0.05); }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-6px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Date badge */
+        .date-badge {
+            background: var(--accent-dim);
+            border: 1px solid var(--border-bright);
+            border-radius: 10px;
+            padding: 8px 10px;
+            text-align: center;
+            min-width: 46px;
+            flex-shrink: 0;
+        }
+        .date-day {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--accent);
+            line-height: 1;
+        }
+        .date-mon {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.5rem;
+            text-transform: uppercase;
+            color: var(--muted);
+            letter-spacing: 0.1em;
+            margin-top: 3px;
+        }
+
+        /* Today badge */
+        .date-badge.today {
+            background: rgba(0,229,160,0.1);
+            border-color: rgba(0,229,160,0.3);
+        }
+        .date-badge.today .date-day { color: var(--safe); }
+
+        /* Past meetings dim */
+        .ri.past { opacity: 0.5; }
+
+        .ri-body { flex: 1; min-width: 0; }
+        .ri-title { font-size: 0.9rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .ri-meta {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.62rem;
+            color: var(--muted);
+            margin-top: 3px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .ri-meta .dot { width: 3px; height: 3px; background: var(--muted); border-radius: 50%; }
+        .ri-meta .time-chip {
+            background: rgba(255,255,255,0.05);
+            border-radius: 4px;
+            padding: 2px 6px;
+        }
+
+        .edit-icon {
+            font-size: 0.8rem;
+            color: var(--muted);
+            opacity: 0.5;
+            flex-shrink: 0;
+        }
+
+        /* Upcoming indicator */
+        .upcoming-dot {
+            width: 6px; height: 6px;
+            background: var(--safe);
+            border-radius: 50%;
+            box-shadow: 0 0 6px var(--safe);
+            flex-shrink: 0;
+        }
+
+        /* Empty */
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--muted);
+        }
+        .empty-state .icon { font-size: 2rem; margin-bottom: 10px; opacity: 0.3; }
+        .empty-state p { font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; }
+
+        /* Modal */
+        .mo {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(8px);
+            z-index: 300;
+            display: none;
+            align-items: flex-end;
+        }
+        .mo.show { display: flex; }
+        .ms {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-top: 2px solid var(--accent);
+            border-radius: 20px 20px 0 0;
+            padding: 20px 18px max(20px, env(safe-area-inset-bottom));
+            width: 100%;
+            animation: sup 0.3s cubic-bezier(0.34,1.56,0.64,1);
+        }
+        @keyframes sup { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        .modal-handle { width: 36px; height: 4px; background: var(--border); border-radius: 2px; margin: 0 auto 18px; }
+        .modal-title {
+            font-size: 1rem;
+            font-weight: 800;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+        .bdanger {
+            width: 100%;
+            background: rgba(255,45,85,0.1);
+            color: var(--urgent);
+            border: 1px solid rgba(255,45,85,0.3);
+            border-radius: 10px;
+            padding: 13px;
+            font-family: 'Syne', sans-serif;
+            font-weight: 700;
+            font-size: 0.9rem;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: background 0.2s;
+        }
+        .bdanger:active { background: rgba(255,45,85,0.2); }
+
+        /* Nav */
+        .bnav {
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            background: rgba(5,8,15,0.97);
+            backdrop-filter: blur(20px);
+            border-top: 1px solid var(--border);
+            display: flex;
+            padding: 8px 0 max(8px, env(safe-area-inset-bottom));
+            z-index: 100;
+        }
+        .nv {
+            flex: 1;
+            text-align: center;
+            color: var(--muted);
+            text-decoration: none;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.55rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            padding: 4px 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 3px;
+            transition: color 0.2s;
+        }
+        .nv .ico { font-size: 1.1rem; }
+        .nv.active { color: var(--accent); }
+    </style>
+</head>
+<body>
+
+<div class="hdr">
+    <div>
+        <div class="hdr-logo">CNS Portal</div>
+        <div class="hdr-title">Meeting Manager</div>
+    </div>
+    <div class="hdr-badge" id="meet-count">0 MEETINGS</div>
+</div>
+
+<div class="scroll-area">
+
+    <div class="st">Scheduled Meetings</div>
+    <div id="meetings-list"></div>
+
+    <div class="st">Schedule New Meeting</div>
+    <div class="add-card">
+        <input id="nm-title" class="fi" type="text" placeholder="Meeting title…">
+        <div class="row" style="margin-bottom:10px;">
+            <input id="nm-date" class="fi" type="date" style="margin-bottom:0;">
+            <input id="nm-time" class="fi" type="time" style="margin-bottom:0;">
+        </div>
+        <select id="nm-owner" class="fs">
+            <option>Yourself</option>
+            <option>Dir. Banda</option>
+            <option>Dir. Mwale</option>
+        </select>
+        <button class="bpri" onclick="addMeeting()">
+            <span>＋</span> Save Meeting
+        </button>
+    </div>
+
+</div>
+
+<!-- Edit Modal -->
+<div class="mo" id="edit-modal" onclick="handleOverlayClick(event)">
+    <div class="ms">
+        <div class="modal-handle"></div>
+        <div class="modal-title">✏️ Edit Meeting</div>
+        <input type="hidden" id="em-id">
+        <input id="em-title" class="fi" type="text" placeholder="Title">
+        <div class="row" style="margin-bottom:10px;">
+            <input id="em-date" class="fi" type="date" style="margin-bottom:0;">
+            <input id="em-time" class="fi" type="time" style="margin-bottom:0;">
+        </div>
+        <div class="btn-row">
+            <button class="bsec" onclick="closeMo()">Cancel</button>
+            <button class="bpri" style="margin-top:0;" onclick="saveEdit()">Save Changes</button>
+        </div>
+        <button class="bdanger" onclick="deleteMeeting()">Delete Meeting</button>
+    </div>
+</div>
+
+<nav class="bnav">
+    <a href="dashboard.html" class="nv">
+        <span class="ico">🏠</span><span>Dash</span>
+    </a>
+    <a href="action.html" class="nv">
+        <span class="ico">✅</span><span>Actions</span>
+    </a>
+    <a href="meetings.html" class="nv active">
+        <span class="ico">📅</span><span>Meetings</span>
+    </a>
+    <a href="audit.html" class="nv">
+        <span class="ico">🔍</span><span>Audit</span>
+    </a>
+</nav>
+
+<script>
+    let meetings = JSON.parse(localStorage.getItem('meetings')) || [];
+    const today = new Date().toISOString().split('T')[0];
+
+    function addMeeting() {
+        const title = document.getElementById('nm-title').value.trim();
+        const date  = document.getElementById('nm-date').value;
+        const time  = document.getElementById('nm-time').value;
+        const owner = document.getElementById('nm-owner').value;
+
+        if (!title || !date) {
+            document.getElementById(!title ? 'nm-title' : 'nm-date').focus();
+            return;
+        }
+
+        const newMeeting = { id: Date.now(), title, date, time, owner };
+        meetings.push(newMeeting);
+        save();
+
+        // Audit log
+        let audit = JSON.parse(localStorage.getItem('auditLog')) || [];
+        audit.push({
+            id: Date.now() + 1,
+            text: `MEETING SCHEDULED: ${title} on ${date}`,
+            type: "Meeting",
+            color: '#29aaff',
+            date: new Date().toLocaleDateString('en-GB'),
+            time: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})
+        });
+        localStorage.setItem('auditLog', JSON.stringify(audit));
+
+        document.getElementById('nm-title').value = '';
+        document.getElementById('nm-date').value = '';
+        document.getElementById('nm-time').value = '';
+        renderGrouped();
+    }
+
+    function renderGrouped() {
+        const container = document.getElementById('meetings-list');
+        document.getElementById('meet-count').textContent = `${meetings.length} MEETING${meetings.length !== 1 ? 'S' : ''}`;
+
+        if (meetings.length === 0) {
+            container.innerHTML = `
+                <div style="background:var(--card); border:1px solid var(--border); border-radius:14px; overflow:hidden;">
+                    <div class="empty-state">
+                        <div class="icon">📅</div>
+                        <p>No meetings scheduled</p>
+                    </div>
+                </div>`;
+            return;
+        }
+
+        meetings.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+        const groups = {};
+        meetings.forEach(m => {
+            const key = new Date(m.date + 'T12:00:00').toLocaleString('en', { month: 'long', year: 'numeric' });
+            if (!groups[key]) groups[key] = [];
+            groups[key].push(m);
+        });
+
+        container.innerHTML = Object.keys(groups).map(month => {
+            const items = groups[month];
+            return `
+                <div class="month-folder">
+                    <div class="month-header">
+                        <span class="month-label">${month}</span>
+                        <span class="month-count">${items.length}</span>
+                        <span class="month-line"></span>
+                    </div>
+                    <div class="meetings-group">
+                        ${items.map((m, i) => {
+                            const d = new Date(m.date + 'T12:00:00');
+                            const day = String(d.getDate()).padStart(2,'0');
+                            const mon = d.toLocaleString('en', { month: 'short' }).toUpperCase();
+                            const dow = d.toLocaleString('en', { weekday: 'short' });
+                            const isToday = m.date === today;
+                            const isPast = m.date < today;
+                            return `
+                                <div class="ri${isPast ? ' past' : ''}" onclick="openEdit(${m.id})" style="animation-delay:${i*0.04}s">
+                                    <div class="date-badge${isToday ? ' today' : ''}">
+                                        <div class="date-day">${day}</div>
+                                        <div class="date-mon">${mon}</div>
+                                    </div>
+                                    <div class="ri-body">
+                                        <div class="ri-title">${escHtml(m.title)}</div>
+                                        <div class="ri-meta">
+                                            <span class="time-chip">${m.time || '--:--'}</span>
+                                            <span class="dot"></span>
+                                            <span>${dow}</span>
+                                            <span class="dot"></span>
+                                            <span>${m.owner}</span>
+                                        </div>
+                                    </div>
+                                    ${isToday ? '<div class="upcoming-dot"></div>' : ''}
+                                    <span class="edit-icon">›</span>
+                                </div>`;
+                        }).join('')}
+                    </div>
+                </div>`;
+        }).join('');
+    }
+
+    function openEdit(id) {
+        const m = meetings.find(x => x.id === id);
+        document.getElementById('em-id').value = m.id;
+        document.getElementById('em-title').value = m.title;
+        document.getElementById('em-date').value = m.date;
+        document.getElementById('em-time').value = m.time || '';
+        document.getElementById('edit-modal').classList.add('show');
+    }
+
+    function saveEdit() {
+        const id = parseInt(document.getElementById('em-id').value);
+        const i = meetings.findIndex(x => x.id === id);
+        meetings[i].title = document.getElementById('em-title').value.trim();
+        meetings[i].date  = document.getElementById('em-date').value;
+        meetings[i].time  = document.getElementById('em-time').value;
+        save();
+        closeMo();
+        renderGrouped();
+    }
+
+    function deleteMeeting() {
+        const id = parseInt(document.getElementById('em-id').value);
+        const item = meetings.find(x => x.id === id);
+
+        let audit = JSON.parse(localStorage.getItem('auditLog')) || [];
+        audit.push({
+            id: Date.now(),
+            text: `MEETING REMOVED: ${item.title}`,
+            type: "Meeting",
+            color: '#ff2d55',
+            date: new Date().toLocaleDateString('en-GB'),
+            time: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})
+        });
+        localStorage.setItem('auditLog', JSON.stringify(audit));
+
+        meetings = meetings.filter(x => x.id !== id);
+        save();
+        closeMo();
+        renderGrouped();
+    }
+
+    function handleOverlayClick(e) {
+        if (e.target === document.getElementById('edit-modal')) closeMo();
+    }
+
+    function closeMo() { document.getElementById('edit-modal').classList.remove('show'); }
+    function save() { localStorage.setItem('meetings', JSON.stringify(meetings)); }
+    function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    // Set today as default date for new meeting
+    document.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('nm-date').value = today;
+        renderGrouped();
+    });
+</script>
+</body>
+</html>

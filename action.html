@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CNS Director | Action Items</title>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #05080f;
+            --surface: #0a1020;
+            --card: #0d1528;
+            --border: rgba(255,255,255,0.06);
+            --border-bright: rgba(41,170,255,0.2);
+            --text: #ddeeff;
+            --muted: #4a6a88;
+            --urgent: #ff2d55;
+            --warning: #ffc600;
+            --safe: #00e5a0;
+            --accent: #29aaff;
+            --accent-dim: rgba(41,170,255,0.1);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Syne', sans-serif;
+            min-height: 100dvh;
+            overflow-x: hidden;
+        }
+
+        /* Subtle grid background */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(41,170,255,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(41,170,255,0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Header */
+        .hdr {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            height: 58px;
+            background: rgba(5,8,15,0.95);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 18px;
+            z-index: 100;
+        }
+
+        .hdr-logo {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.65rem;
+            font-weight: 700;
+            color: var(--accent);
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+        }
+
+        .hdr-title {
+            font-size: 1rem;
+            font-weight: 800;
+            letter-spacing: -0.01em;
+        }
+
+        .hdr-badge {
+            background: var(--accent-dim);
+            border: 1px solid var(--border-bright);
+            border-radius: 20px;
+            padding: 4px 10px;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.6rem;
+            color: var(--accent);
+            letter-spacing: 0.1em;
+        }
+
+        /* Main content */
+        .scroll-area {
+            position: relative;
+            z-index: 1;
+            padding: 74px 14px 100px;
+        }
+
+        /* Section title */
+        .st {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.58rem;
+            font-weight: 600;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin: 22px 0 10px 2px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .st::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border);
+        }
+
+        /* Add Form Card */
+        .add-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-top: 2px solid var(--accent);
+            border-radius: 14px;
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+
+        .fi, .fs {
+            width: 100%;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--text);
+            padding: 13px 14px;
+            margin-bottom: 10px;
+            outline: none;
+            font-family: 'Syne', sans-serif;
+            font-size: 0.9rem;
+            transition: border-color 0.2s;
+            -webkit-appearance: none;
+        }
+
+        .fi:focus, .fs:focus {
+            border-color: var(--accent);
+            background: rgba(41,170,255,0.04);
+        }
+
+        .fi::placeholder { color: var(--muted); }
+
+        .row { display: flex; gap: 10px; }
+        .row .fs { margin-bottom: 0; }
+
+        .bpri {
+            width: 100%;
+            background: var(--accent);
+            color: #05080f;
+            border: none;
+            border-radius: 10px;
+            padding: 14px;
+            font-family: 'Syne', sans-serif;
+            font-weight: 800;
+            font-size: 0.9rem;
+            cursor: pointer;
+            margin-top: 10px;
+            letter-spacing: 0.03em;
+            transition: opacity 0.2s, transform 0.1s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .bpri:active { transform: scale(0.98); opacity: 0.85; }
+
+        /* Stats bar */
+        .stats-bar {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        .stat-chip {
+            flex: 1;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 10px;
+            text-align: center;
+        }
+        .stat-chip .val {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 1.4rem;
+            font-weight: 700;
+            line-height: 1;
+        }
+        .stat-chip .lbl {
+            font-size: 0.58rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-top: 3px;
+        }
+        .stat-chip.crit .val { color: var(--urgent); }
+        .stat-chip.high .val { color: var(--warning); }
+        .stat-chip.norm .val { color: var(--safe); }
+
+        /* Action items list */
+        .actions-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            overflow: hidden;
+        }
+
+        .ai-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border);
+            transition: background 0.15s;
+            animation: slideIn 0.3s ease both;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-8px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .ai-item:last-child { border-bottom: none; }
+        .ai-item:hover { background: rgba(255,255,255,0.02); }
+
+        .prio-pill {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.5rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            padding: 3px 7px;
+            border-radius: 4px;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+        .prio-Critical { background: rgba(255,45,85,0.15); color: var(--urgent); border: 1px solid rgba(255,45,85,0.3); }
+        .prio-High     { background: rgba(255,198,0,0.12); color: var(--warning); border: 1px solid rgba(255,198,0,0.3); }
+        .prio-Normal   { background: rgba(41,170,255,0.1); color: var(--accent);  border: 1px solid rgba(41,170,255,0.2); }
+
+        .ai-content { flex: 1; min-width: 0; }
+        .ai-text {
+            font-size: 0.88rem;
+            font-weight: 600;
+            line-height: 1.35;
+            word-break: break-word;
+        }
+        .ai-meta {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.6rem;
+            color: var(--muted);
+            margin-top: 4px;
+        }
+
+        .del-btn {
+            background: none;
+            border: none;
+            color: var(--muted);
+            font-size: 1rem;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 6px;
+            transition: color 0.2s, background 0.2s;
+            flex-shrink: 0;
+            line-height: 1;
+        }
+        .del-btn:hover { color: var(--urgent); background: rgba(255,45,85,0.1); }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--muted);
+        }
+        .empty-state .icon { font-size: 2rem; margin-bottom: 10px; opacity: 0.4; }
+        .empty-state p { font-size: 0.8rem; font-family: 'IBM Plex Mono', monospace; }
+
+        /* Critical pulse */
+        .ai-item.is-critical {
+            border-left: 3px solid var(--urgent);
+        }
+        .ai-item.is-high {
+            border-left: 3px solid var(--warning);
+        }
+
+        /* Nav */
+        .bnav {
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            background: rgba(5,8,15,0.97);
+            backdrop-filter: blur(20px);
+            border-top: 1px solid var(--border);
+            display: flex;
+            padding: 8px 0 max(8px, env(safe-area-inset-bottom));
+            z-index: 100;
+        }
+        .nv {
+            flex: 1;
+            text-align: center;
+            color: var(--muted);
+            text-decoration: none;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.55rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            padding: 4px 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 3px;
+            transition: color 0.2s;
+        }
+        .nv .ico { font-size: 1.1rem; }
+        .nv.active { color: var(--accent); }
+        .nv.active .ico-wrap {
+            position: relative;
+        }
+        .nv.active .ico-wrap::after {
+            content: '';
+            position: absolute;
+            bottom: -4px; left: 50%;
+            transform: translateX(-50%);
+            width: 4px; height: 4px;
+            background: var(--accent);
+            border-radius: 50%;
+        }
+    </style>
+</head>
+<body>
+
+<div class="hdr">
+    <div>
+        <div class="hdr-logo">CNS Portal</div>
+        <div class="hdr-title">Accountability</div>
+    </div>
+    <div class="hdr-badge" id="task-count">0 TASKS</div>
+</div>
+
+<div class="scroll-area">
+
+    <div class="st">Add Action Item</div>
+    <div class="add-card">
+        <input id="na-text" class="fi" type="text" placeholder="Describe action item...">
+        <div class="row">
+            <select id="na-owner" class="fs">
+                <option>Yourself</option>
+                <option>Dir. Banda</option>
+                <option>Dir. Mwale</option>
+            </select>
+            <select id="na-prio" class="fs">
+                <option value="Normal">Normal</option>
+                <option value="High">High</option>
+                <option value="Critical">Critical</option>
+            </select>
+        </div>
+        <button class="bpri" onclick="addAction()">
+            <span>＋</span> Add Action Item
+        </button>
+    </div>
+
+    <div class="st">Priority Overview</div>
+    <div class="stats-bar">
+        <div class="stat-chip crit">
+            <div class="val" id="stat-crit">0</div>
+            <div class="lbl">Critical</div>
+        </div>
+        <div class="stat-chip high">
+            <div class="val" id="stat-high">0</div>
+            <div class="lbl">High</div>
+        </div>
+        <div class="stat-chip norm">
+            <div class="val" id="stat-norm">0</div>
+            <div class="lbl">Normal</div>
+        </div>
+    </div>
+
+    <div class="st">Active Tasks</div>
+    <div class="actions-card" id="actions-list"></div>
+
+</div>
+
+<nav class="bnav">
+    <a href="dashboard.html" class="nv">
+        <span class="ico">🏠</span>
+        <span>Dash</span>
+    </a>
+    <a href="action.html" class="nv active">
+        <div class="ico-wrap"><span class="ico">✅</span></div>
+        <span>Actions</span>
+    </a>
+    <a href="meetings.html" class="nv">
+        <span class="ico">📅</span>
+        <span>Meetings</span>
+    </a>
+    <a href="audit.html" class="nv">
+        <span class="ico">🔍</span>
+        <span>Audit</span>
+    </a>
+</nav>
+
+<script>
+    let actions = JSON.parse(localStorage.getItem('actions')) || [];
+
+    function updateStats() {
+        const crit = actions.filter(a => a.prio === 'Critical').length;
+        const high = actions.filter(a => a.prio === 'High').length;
+        const norm = actions.filter(a => a.prio === 'Normal').length;
+        document.getElementById('stat-crit').textContent = crit;
+        document.getElementById('stat-high').textContent = high;
+        document.getElementById('stat-norm').textContent = norm;
+        document.getElementById('task-count').textContent = `${actions.length} TASK${actions.length !== 1 ? 'S' : ''}`;
+    }
+
+    function renderActions() {
+        const list = document.getElementById('actions-list');
+        if (actions.length === 0) {
+            list.innerHTML = `<div class="empty-state"><div class="icon">✦</div><p>No pending actions</p></div>`;
+            updateStats();
+            return;
+        }
+
+        const order = { 'Critical': 0, 'High': 1, 'Normal': 2 };
+        actions.sort((a, b) => order[a.prio] - order[b.prio]);
+
+        list.innerHTML = actions.map((item, i) => `
+            <div class="ai-item${item.prio === 'Critical' ? ' is-critical' : item.prio === 'High' ? ' is-high' : ''}" style="animation-delay:${i * 0.04}s">
+                <span class="prio-pill prio-${item.prio}">${item.prio.toUpperCase()}</span>
+                <div class="ai-content">
+                    <div class="ai-text">${escHtml(item.text)}</div>
+                    <div class="ai-meta">→ ${item.owner}</div>
+                </div>
+                <button class="del-btn" onclick="deleteAction(${item.id})" title="Mark complete">✕</button>
+            </div>
+        `).join('');
+
+        updateStats();
+    }
+
+    function escHtml(s) {
+        return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    function addAction() {
+        const text = document.getElementById('na-text').value.trim();
+        const owner = document.getElementById('na-owner').value;
+        const prio = document.getElementById('na-prio').value;
+
+        if (!text) {
+            document.getElementById('na-text').focus();
+            return;
+        }
+
+        const newAction = { id: Date.now(), text, owner, prio };
+        actions.push(newAction);
+        saveActions();
+
+        let audit = JSON.parse(localStorage.getItem('auditLog')) || [];
+        audit.push({
+            id: Date.now() + 1,
+            text: `ACTION ADDED: ${text} (${owner})`,
+            type: "Action",
+            color: prio === 'Critical' ? '#ff2d55' : '#29aaff',
+            date: new Date().toLocaleDateString('en-GB'),
+            time: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})
+        });
+        localStorage.setItem('auditLog', JSON.stringify(audit));
+
+        document.getElementById('na-text').value = '';
+        renderActions();
+    }
+
+    function deleteAction(id) {
+        const item = actions.find(a => a.id === id);
+        actions = actions.filter(a => a.id !== id);
+        saveActions();
+
+        let audit = JSON.parse(localStorage.getItem('auditLog')) || [];
+        audit.push({
+            id: Date.now(),
+            text: `ACTION COMPLETED: ${item.text}`,
+            type: "Action",
+            color: "#00e5a0",
+            date: new Date().toLocaleDateString('en-GB'),
+            time: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})
+        });
+        localStorage.setItem('auditLog', JSON.stringify(audit));
+
+        renderActions();
+    }
+
+    function saveActions() {
+        localStorage.setItem('actions', JSON.stringify(actions));
+    }
+
+    // Enter key support
+    document.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('na-text').addEventListener('keydown', e => {
+            if (e.key === 'Enter') addAction();
+        });
+        renderActions();
+    });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CNS Director | Audit Trail</title>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #05080f;
+            --surface: #0a1020;
+            --card: #0d1528;
+            --border: rgba(255,255,255,0.06);
+            --border-bright: rgba(41,170,255,0.2);
+            --text: #ddeeff;
+            --muted: #4a6a88;
+            --urgent: #ff2d55;
+            --warning: #ffc600;
+            --safe: #00e5a0;
+            --accent: #29aaff;
+            --accent-dim: rgba(41,170,255,0.1);
+            --manual: #b97cff;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Syne', sans-serif;
+            min-height: 100dvh;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(41,170,255,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(41,170,255,0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Header */
+        .hdr {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            height: 58px;
+            background: rgba(5,8,15,0.95);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 18px;
+            z-index: 100;
+        }
+        .hdr-logo { font-family:'IBM Plex Mono',monospace; font-size:.65rem; font-weight:700; color:var(--accent); letter-spacing:.2em; }
+        .hdr-title { font-size:1rem; font-weight:800; letter-spacing:-0.01em; }
+        .clear-btn {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.58rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            color: var(--urgent);
+            background: rgba(255,45,85,0.08);
+            border: 1px solid rgba(255,45,85,0.2);
+            border-radius: 8px;
+            padding: 6px 12px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .clear-btn:active { background: rgba(255,45,85,0.18); }
+
+        .scroll-area {
+            position: relative;
+            z-index: 1;
+            padding: 74px 14px 110px;
+        }
+
+        /* Section title */
+        .st {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.58rem;
+            font-weight: 600;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin: 22px 0 10px 2px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .st::after { content:''; flex:1; height:1px; background:var(--border); }
+
+        /* Stats row */
+        .stats-bar { display:flex; gap:8px; margin-bottom:4px; }
+        .stat-chip {
+            flex:1;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 10px 8px;
+            text-align: center;
+        }
+        .stat-chip .val { font-family:'IBM Plex Mono',monospace; font-size:1.3rem; font-weight:700; line-height:1; }
+        .stat-chip .lbl { font-size:0.55rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.1em; margin-top:3px; }
+        .stat-chip.s-action .val  { color: var(--accent); }
+        .stat-chip.s-meeting .val { color: var(--safe); }
+        .stat-chip.s-manual .val  { color: var(--manual); }
+
+        /* Filter chips */
+        .filter-row {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding: 2px 2px 2px;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+        .filter-row::-webkit-scrollbar { display: none; }
+        .chip {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 7px 16px;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.62rem;
+            color: var(--muted);
+            white-space: nowrap;
+            cursor: pointer;
+            transition: all 0.18s;
+            letter-spacing: 0.08em;
+            flex-shrink: 0;
+        }
+        .chip.active.f-all     { background:var(--accent-dim); border-color:var(--border-bright); color:var(--accent); }
+        .chip.active.f-action  { background:rgba(41,170,255,0.1); border-color:rgba(41,170,255,0.3); color:var(--accent); }
+        .chip.active.f-meeting { background:rgba(0,229,160,0.1); border-color:rgba(0,229,160,0.3); color:var(--safe); }
+        .chip.active.f-manual  { background:rgba(185,124,255,0.1); border-color:rgba(185,124,255,0.3); color:var(--manual); }
+
+        /* Manual entry */
+        .add-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-top: 2px solid var(--manual);
+            border-radius: 14px;
+            padding: 16px;
+        }
+        .fi {
+            width: 100%;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--text);
+            padding: 13px 14px;
+            margin-bottom: 10px;
+            outline: none;
+            font-family: 'Syne', sans-serif;
+            font-size: 0.9rem;
+            transition: border-color 0.2s;
+        }
+        .fi:focus { border-color: var(--manual); background: rgba(185,124,255,0.04); }
+        .fi::placeholder { color: var(--muted); }
+        .bpri {
+            width: 100%;
+            background: var(--manual);
+            color: #05080f;
+            border: none;
+            border-radius: 10px;
+            padding: 14px;
+            font-family: 'Syne', sans-serif;
+            font-weight: 800;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: opacity 0.2s, transform 0.1s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .bpri:active { transform: scale(0.98); opacity: 0.85; }
+
+        /* Timeline */
+        .timeline-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            overflow: hidden;
+        }
+
+        /* Day group */
+        .day-group { }
+        .day-label {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.6rem;
+            font-weight: 700;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: var(--muted);
+            padding: 10px 16px 8px;
+            background: rgba(255,255,255,0.02);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .day-label span { opacity: 0.5; }
+
+        /* Audit entry */
+        .ae {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 13px 16px;
+            border-bottom: 1px solid var(--border);
+            animation: fadeIn 0.25s ease both;
+            position: relative;
+        }
+        .ae:last-child { border-bottom: none; }
+        .ae:hover { background: rgba(255,255,255,0.015); }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateX(-6px); }
+            to   { opacity: 1; transform: translateX(0); }
+        }
+
+        /* Timeline line */
+        .ae::before {
+            content: '';
+            position: absolute;
+            left: 27px;
+            top: 30px;
+            bottom: -13px;
+            width: 1px;
+            background: var(--border);
+        }
+        .ae:last-child::before { display: none; }
+
+        .log-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-top: 4px;
+            flex-shrink: 0;
+            position: relative;
+            z-index: 1;
+            box-shadow: 0 0 0 2px var(--bg);
+        }
+
+        .log-body { flex: 1; min-width: 0; }
+        .log-type {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.5rem;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            padding: 2px 6px;
+            border-radius: 4px;
+            display: inline-block;
+            margin-bottom: 4px;
+        }
+        .type-Action  { background:rgba(41,170,255,0.12); color:var(--accent); }
+        .type-Meeting { background:rgba(0,229,160,0.1); color:var(--safe); }
+        .type-Manual  { background:rgba(185,124,255,0.1); color:var(--manual); }
+
+        .log-text {
+            font-size: 0.85rem;
+            font-weight: 500;
+            line-height: 1.4;
+            word-break: break-word;
+        }
+        .log-time {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.6rem;
+            color: var(--muted);
+            margin-top: 4px;
+        }
+
+        .del-btn {
+            background: none;
+            border: none;
+            color: var(--muted);
+            font-size: 0.9rem;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 6px;
+            transition: color 0.2s, background 0.2s;
+            flex-shrink: 0;
+            line-height: 1;
+            margin-top: 2px;
+        }
+        .del-btn:hover { color: var(--urgent); background: rgba(255,45,85,0.1); }
+
+        /* Empty */
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--muted);
+        }
+        .empty-state .icon { font-size: 2rem; margin-bottom: 10px; opacity: 0.3; }
+        .empty-state p { font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; }
+
+        /* Confirm modal */
+        .mo {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.75);
+            backdrop-filter: blur(8px);
+            z-index: 300;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .mo.show { display: flex; }
+        .confirm-box {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-top: 2px solid var(--urgent);
+            border-radius: 16px;
+            padding: 24px 20px;
+            width: 100%;
+            max-width: 320px;
+            animation: popIn 0.2s cubic-bezier(0.34,1.56,0.64,1);
+        }
+        @keyframes popIn {
+            from { opacity:0; transform:scale(0.9); }
+            to   { opacity:1; transform:scale(1); }
+        }
+        .confirm-title { font-size: 1rem; font-weight: 800; margin-bottom: 8px; }
+        .confirm-sub { font-size: 0.8rem; color: var(--muted); margin-bottom: 20px; line-height: 1.4; }
+        .confirm-row { display: flex; gap: 10px; }
+        .bcancel {
+            flex: 1;
+            background: rgba(255,255,255,0.04);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 13px;
+            font-family: 'Syne', sans-serif;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .bdanger {
+            flex: 1;
+            background: rgba(255,45,85,0.15);
+            color: var(--urgent);
+            border: 1px solid rgba(255,45,85,0.3);
+            border-radius: 10px;
+            padding: 13px;
+            font-family: 'Syne', sans-serif;
+            font-weight: 800;
+            cursor: pointer;
+        }
+
+        /* Nav */
+        .bnav {
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            background: rgba(5,8,15,0.97);
+            backdrop-filter: blur(20px);
+            border-top: 1px solid var(--border);
+            display: flex;
+            padding: 8px 0 max(8px, env(safe-area-inset-bottom));
+            z-index: 100;
+        }
+        .nv {
+            flex: 1;
+            text-align: center;
+            color: var(--muted);
+            text-decoration: none;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.55rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            padding: 4px 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 3px;
+            transition: color 0.2s;
+        }
+        .nv .ico { font-size: 1.1rem; }
+        .nv.active { color: var(--accent); }
+    </style>
+</head>
+<body>
+
+<div class="hdr">
+    <div>
+        <div class="hdr-logo">CNS Portal</div>
+        <div class="hdr-title">System Audit</div>
+    </div>
+    <button class="clear-btn" onclick="confirmClear()">CLEAR ALL</button>
+</div>
+
+<div class="scroll-area">
+
+    <div class="st">Log Summary</div>
+    <div class="stats-bar">
+        <div class="stat-chip s-action">
+            <div class="val" id="stat-action">0</div>
+            <div class="lbl">Actions</div>
+        </div>
+        <div class="stat-chip s-meeting">
+            <div class="val" id="stat-meeting">0</div>
+            <div class="lbl">Meetings</div>
+        </div>
+        <div class="stat-chip s-manual">
+            <div class="val" id="stat-manual">0</div>
+            <div class="lbl">Manual</div>
+        </div>
+    </div>
+
+    <div class="st">Filter</div>
+    <div class="filter-row">
+        <div class="chip active f-all"    onclick="setFilter('All', this)">All Logs</div>
+        <div class="chip f-action"        onclick="setFilter('Action', this)">Actions</div>
+        <div class="chip f-meeting"       onclick="setFilter('Meeting', this)">Meetings</div>
+        <div class="chip f-manual"        onclick="setFilter('Manual', this)">Manual</div>
+    </div>
+
+    <div class="st">Log Entry</div>
+    <div class="add-card">
+        <input id="man-text" class="fi" type="text" placeholder="Record a note or decision…">
+        <button class="bpri" onclick="addManualLog()">
+            <span>✦</span> Log Activity
+        </button>
+    </div>
+
+    <div class="st">Activity Timeline</div>
+    <div class="timeline-card" id="audit-list"></div>
+
+</div>
+
+<!-- Confirm Clear Modal -->
+<div class="mo" id="confirm-modal" onclick="handleOverlay(event)">
+    <div class="confirm-box">
+        <div class="confirm-title">⚠️ Clear Audit Log?</div>
+        <div class="confirm-sub">This will permanently erase all recorded activity. This action cannot be undone.</div>
+        <div class="confirm-row">
+            <button class="bcancel" onclick="closeMo()">Cancel</button>
+            <button class="bdanger" onclick="clearAll()">Clear All</button>
+        </div>
+    </div>
+</div>
+
+<nav class="bnav">
+    <a href="dashboard.html" class="nv"><span class="ico">🏠</span><span>Dash</span></a>
+    <a href="action.html"    class="nv"><span class="ico">✅</span><span>Actions</span></a>
+    <a href="meetings.html"  class="nv"><span class="ico">📅</span><span>Meetings</span></a>
+    <a href="audit.html"     class="nv active"><span class="ico">🔍</span><span>Audit</span></a>
+</nav>
+
+<script>
+    let auditLog = JSON.parse(localStorage.getItem('auditLog')) || [];
+    let activeFilter = 'All';
+
+    function updateStats() {
+        document.getElementById('stat-action').textContent  = auditLog.filter(l => l.type === 'Action').length;
+        document.getElementById('stat-meeting').textContent = auditLog.filter(l => l.type === 'Meeting').length;
+        document.getElementById('stat-manual').textContent  = auditLog.filter(l => l.type === 'Manual').length;
+    }
+
+    function getLogColor(log) {
+        if (log.color) return log.color;
+        if (log.type === 'Meeting') return 'var(--safe)';
+        if (log.type === 'Manual')  return 'var(--manual)';
+        return 'var(--accent)';
+    }
+
+    function cleanText(raw) {
+        // Strip prefix labels for cleaner display - show them as type badges instead
+        return raw
+            .replace(/^ACTION ADDED:\s*/i, '')
+            .replace(/^ACTION COMPLETED:\s*/i, '')
+            .replace(/^MEETING SCHEDULED:\s*/i, '')
+            .replace(/^MEETING REMOVED:\s*/i, '')
+            .replace(/^MANUAL:\s*/i, '');
+    }
+
+    function getSubLabel(log) {
+        const t = log.text || '';
+        if (/ACTION COMPLETED/i.test(t)) return '✓ Completed';
+        if (/ACTION ADDED/i.test(t))     return '＋ Added';
+        if (/MEETING SCHEDULED/i.test(t))return '📅 Scheduled';
+        if (/MEETING REMOVED/i.test(t))  return '✕ Removed';
+        return null;
+    }
+
+    function renderAudit(filter = activeFilter) {
+        const container = document.getElementById('audit-list');
+        let filtered = auditLog;
+        if (filter !== 'All') filtered = auditLog.filter(l => l.type === filter);
+
+        updateStats();
+
+        if (filtered.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="icon">🔍</div>
+                    <p>${filter === 'All' ? 'No activity logged yet' : `No ${filter.toLowerCase()} logs found`}</p>
+                </div>`;
+            return;
+        }
+
+        // Sort newest first
+        const sorted = filtered.slice().reverse();
+
+        // Group by date
+        const groups = {};
+        sorted.forEach(log => {
+            const d = log.date || 'Unknown';
+            if (!groups[d]) groups[d] = [];
+            groups[d].push(log);
+        });
+
+        const todayStr = new Date().toLocaleDateString('en-GB');
+
+        container.innerHTML = Object.keys(groups).map(date => {
+            const label = date === todayStr ? 'Today' : date;
+            const items = groups[date];
+            return `
+                <div class="day-group">
+                    <div class="day-label">${label} <span>— ${items.length} entr${items.length === 1 ? 'y' : 'ies'}</span></div>
+                    ${items.map((log, i) => {
+                        const color = getLogColor(log);
+                        const sub = getSubLabel(log);
+                        return `
+                        <div class="ae" style="animation-delay:${i * 0.035}s">
+                            <div class="log-dot" style="background:${color}; box-shadow:0 0 6px ${color}40;"></div>
+                            <div class="log-body">
+                                <div>
+                                    <span class="log-type type-${log.type || 'Manual'}">${log.type || 'Manual'}${sub ? ' · ' + sub : ''}</span>
+                                </div>
+                                <div class="log-text">${escHtml(cleanText(log.text || ''))}</div>
+                                <div class="log-time">${log.time || '--:--'}</div>
+                            </div>
+                            <button class="del-btn" onclick="deleteLog(${log.id})">✕</button>
+                        </div>`;
+                    }).join('')}
+                </div>`;
+        }).join('');
+    }
+
+    function addManualLog() {
+        const text = document.getElementById('man-text').value.trim();
+        if (!text) { document.getElementById('man-text').focus(); return; }
+
+        const entry = {
+            id: Date.now(),
+            text: 'MANUAL: ' + text,
+            type: 'Manual',
+            color: 'var(--manual)',
+            date: new Date().toLocaleDateString('en-GB'),
+            time: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})
+        };
+
+        auditLog.push(entry);
+        save();
+        document.getElementById('man-text').value = '';
+        renderAudit();
+    }
+
+    function setFilter(type, el) {
+        activeFilter = type;
+        document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+        el.classList.add('active');
+        renderAudit(type);
+    }
+
+    function deleteLog(id) {
+        auditLog = auditLog.filter(l => l.id !== id);
+        save();
+        renderAudit();
+    }
+
+    function confirmClear() {
+        document.getElementById('confirm-modal').classList.add('show');
+    }
+
+    function clearAll() {
+        auditLog = [];
+        save();
+        closeMo();
+        renderAudit();
+    }
+
+    function closeMo() { document.getElementById('confirm-modal').classList.remove('show'); }
+    function handleOverlay(e) { if (e.target === document.getElementById('confirm-modal')) closeMo(); }
+    function save() { localStorage.setItem('auditLog', JSON.stringify(auditLog)); }
+    function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('man-text').addEventListener('keydown', e => {
+            if (e.key === 'Enter') addManualLog();
+        });
+        renderAudit();
+    });
+</script>
+</body>
+</html>
