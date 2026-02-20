@@ -333,6 +333,128 @@
             font-size: 0.72rem;
         }
 
+        /* Report Button */
+        .report-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+            padding: 14px;
+            margin-top: 22px;
+            background: linear-gradient(135deg, rgba(41,170,255,0.15), rgba(41,170,255,0.05));
+            border: 1px solid var(--border-bright);
+            border-radius: 14px;
+            color: var(--accent);
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: background 0.2s, border-color 0.2s;
+        }
+        .report-btn:active { background: rgba(41,170,255,0.2); }
+        .report-btn-icon { font-size: 1.2rem; }
+
+        /* Modal Overlay */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(5,8,15,0.85);
+            backdrop-filter: blur(8px);
+            z-index: 200;
+            align-items: flex-end;
+            justify-content: center;
+        }
+        .modal-overlay.open { display: flex; }
+        .modal-box {
+            background: #0d1528;
+            border: 1px solid var(--border-bright);
+            border-radius: 20px 20px 0 0;
+            padding: 24px 20px max(24px, env(safe-area-inset-bottom));
+            width: 100%;
+            max-width: 520px;
+            animation: slideUp 0.25s ease;
+        }
+        @keyframes slideUp { from{transform:translateY(40px);opacity:0;} to{transform:translateY(0);opacity:1;} }
+        .modal-title {
+            font-size: 1rem;
+            font-weight: 800;
+            margin-bottom: 4px;
+        }
+        .modal-sub {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.6rem;
+            color: var(--muted);
+            margin-bottom: 20px;
+            letter-spacing: 0.08em;
+        }
+        .modal-options { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+        .modal-opt {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 14px 16px;
+            cursor: pointer;
+            transition: border-color 0.15s, background 0.15s;
+        }
+        .modal-opt.selected {
+            border-color: var(--accent);
+            background: rgba(41,170,255,0.08);
+        }
+        .modal-opt-ico { font-size: 1.3rem; flex-shrink: 0; }
+        .modal-opt-label { font-size: 0.88rem; font-weight: 700; color: var(--text); }
+        .modal-opt-desc { font-family: 'IBM Plex Mono', monospace; font-size: 0.58rem; color: var(--muted); margin-top: 2px; }
+        .modal-check {
+            margin-left: auto;
+            width: 20px; height: 20px;
+            border-radius: 50%;
+            border: 2px solid var(--border);
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+            transition: background 0.15s, border-color 0.15s;
+        }
+        .modal-opt.selected .modal-check {
+            background: var(--accent);
+            border-color: var(--accent);
+        }
+        .modal-check::after { content:''; display:none; width:6px; height:6px; border-radius:50%; background:#fff; }
+        .modal-opt.selected .modal-check::after { display:block; }
+        .modal-btns { display: flex; gap: 10px; }
+        .modal-cancel {
+            flex: 1;
+            padding: 13px;
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            color: var(--muted);
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            cursor: pointer;
+        }
+        .modal-generate {
+            flex: 2;
+            padding: 13px;
+            background: var(--accent);
+            border: none;
+            border-radius: 12px;
+            color: #05080f;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            cursor: pointer;
+            transition: opacity 0.15s;
+        }
+        .modal-generate:active { opacity: 0.8; }
+
         /* Nav */
         .bnav {
             position: fixed;
@@ -466,7 +588,70 @@
         </a>
     </div>
 
+    <!-- Report Button -->
+    <button class="report-btn" onclick="openReportModal()">
+        <span class="report-btn-icon">📄</span>
+        Export PDF Report
+    </button>
+
 </div>
+
+<!-- Report Modal -->
+<div class="modal-overlay" id="reportModal">
+    <div class="modal-box">
+        <div class="modal-title">Generate PDF Report</div>
+        <div class="modal-sub">SELECT WHAT TO INCLUDE IN THE REPORT</div>
+        <div class="modal-options">
+            <div class="modal-opt selected" data-key="all" onclick="toggleOpt(this)">
+                <span class="modal-opt-ico">📋</span>
+                <div>
+                    <div class="modal-opt-label">Full Report</div>
+                    <div class="modal-opt-desc">Everything + analysis chart</div>
+                </div>
+                <div class="modal-check"></div>
+            </div>
+            <div class="modal-opt" data-key="tasks" onclick="toggleOpt(this)">
+                <span class="modal-opt-ico">✅</span>
+                <div>
+                    <div class="modal-opt-label">Pending Tasks</div>
+                    <div class="modal-opt-desc">All action items with priority</div>
+                </div>
+                <div class="modal-check"></div>
+            </div>
+            <div class="modal-opt" data-key="meetings" onclick="toggleOpt(this)">
+                <span class="modal-opt-ico">📅</span>
+                <div>
+                    <div class="modal-opt-label">Meetings</div>
+                    <div class="modal-opt-desc">Scheduled meetings & dates</div>
+                </div>
+                <div class="modal-check"></div>
+            </div>
+            <div class="modal-opt" data-key="audit" onclick="toggleOpt(this)">
+                <span class="modal-opt-ico">🔍</span>
+                <div>
+                    <div class="modal-opt-label">Audit Log</div>
+                    <div class="modal-opt-desc">Activity history trail</div>
+                </div>
+                <div class="modal-check"></div>
+            </div>
+            <div class="modal-opt" data-key="chart" onclick="toggleOpt(this)">
+                <span class="modal-opt-ico">📊</span>
+                <div>
+                    <div class="modal-opt-label">Analysis Chart</div>
+                    <div class="modal-opt-desc">Most active categories graph</div>
+                </div>
+                <div class="modal-check"></div>
+            </div>
+        </div>
+        <div class="modal-btns">
+            <button class="modal-cancel" onclick="closeReportModal()">Cancel</button>
+            <button class="modal-generate" onclick="generatePDF()">⬇ Generate PDF</button>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden canvas for chart generation -->
+<canvas id="reportChart" style="display:none; width:500px; height:280px;"></canvas>
 
 <nav class="bnav">
     <a href="dashboard.html" class="nv active"><span class="ico">🏠</span><span>Dash</span></a>
@@ -596,6 +781,394 @@
     }
 
     document.addEventListener('DOMContentLoaded', updateDashboard);
+</script>
+
+<!-- PDF & Chart Libraries -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+
+<script>
+    // ── Modal logic ──────────────────────────────────────────────
+    let selectedOptions = new Set(['all']);
+
+    function openReportModal() {
+        document.getElementById('reportModal').classList.add('open');
+    }
+    function closeReportModal() {
+        document.getElementById('reportModal').classList.remove('open');
+    }
+    // Close on backdrop click
+    document.getElementById('reportModal').addEventListener('click', function(e) {
+        if (e.target === this) closeReportModal();
+    });
+
+    function toggleOpt(el) {
+        const key = el.dataset.key;
+        if (key === 'all') {
+            // Select only "all"
+            document.querySelectorAll('.modal-opt').forEach(o => o.classList.remove('selected'));
+            el.classList.add('selected');
+            selectedOptions = new Set(['all']);
+        } else {
+            // Deselect "all"
+            const allOpt = document.querySelector('.modal-opt[data-key="all"]');
+            allOpt.classList.remove('selected');
+            selectedOptions.delete('all');
+            // Toggle this option
+            if (el.classList.contains('selected')) {
+                el.classList.remove('selected');
+                selectedOptions.delete(key);
+                // If nothing selected, re-select all
+                if (selectedOptions.size === 0) {
+                    allOpt.classList.add('selected');
+                    selectedOptions.add('all');
+                }
+            } else {
+                el.classList.add('selected');
+                selectedOptions.add(key);
+            }
+        }
+    }
+
+    // ── Chart builder (returns base64 PNG) ───────────────────────
+    function buildChartImage() {
+        return new Promise(resolve => {
+            const auditLog = JSON.parse(localStorage.getItem('auditLog')) || [];
+            const actions  = JSON.parse(localStorage.getItem('actions'))  || [];
+            const meetings = JSON.parse(localStorage.getItem('meetings'))  || [];
+
+            // Count by type
+            const typeCounts = {};
+            auditLog.forEach(e => {
+                const t = e.type || 'Manual';
+                typeCounts[t] = (typeCounts[t] || 0) + 1;
+            });
+
+            // Priority breakdown for tasks
+            const critCount = actions.filter(a => a.prio === 'Critical').length;
+            const highCount = actions.filter(a => a.prio === 'High').length;
+            const medCount  = actions.filter(a => a.prio === 'Medium').length;
+            const lowCount  = actions.filter(a => a.prio === 'Low').length;
+
+            const canvas = document.getElementById('reportChart');
+            canvas.width = 500;
+            canvas.height = 300;
+            canvas.style.display = 'block';
+
+            // Destroy existing chart if any
+            if (window._reportChartInstance) {
+                window._reportChartInstance.destroy();
+            }
+
+            const labels = [];
+            const data   = [];
+            const colors = [];
+
+            // Audit types
+            Object.entries(typeCounts).forEach(([k,v]) => {
+                labels.push(k + ' Logs');
+                data.push(v);
+                colors.push(k === 'Action' ? '#29aaff' : k === 'Meeting' ? '#00e5a0' : '#b97cff');
+            });
+
+            // Task priorities
+            if (critCount) { labels.push('Critical Tasks'); data.push(critCount); colors.push('#ff2d55'); }
+            if (highCount) { labels.push('High Prio Tasks'); data.push(highCount); colors.push('#ffc600'); }
+            if (medCount)  { labels.push('Medium Tasks');   data.push(medCount);  colors.push('#29aaff'); }
+            if (lowCount)  { labels.push('Low Prio Tasks'); data.push(lowCount);  colors.push('#4a6a88'); }
+            if (meetings.length) { labels.push('Meetings'); data.push(meetings.length); colors.push('#00e5a0'); }
+
+            // Sort by value desc
+            const combined = labels.map((l,i) => ({l, v: data[i], c: colors[i]}));
+            combined.sort((a,b) => b.v - a.v);
+
+            window._reportChartInstance = new Chart(canvas, {
+                type: 'bar',
+                data: {
+                    labels: combined.map(x=>x.l),
+                    datasets: [{
+                        label: 'Count',
+                        data: combined.map(x=>x.v),
+                        backgroundColor: combined.map(x=>x.c + 'cc'),
+                        borderColor: combined.map(x=>x.c),
+                        borderWidth: 2,
+                        borderRadius: 6,
+                    }]
+                },
+                options: {
+                    responsive: false,
+                    animation: { onComplete: () => {
+                        const img = canvas.toDataURL('image/png');
+                        canvas.style.display = 'none';
+                        resolve(img);
+                    }},
+                    plugins: {
+                        legend: { display: false },
+                        title: {
+                            display: true,
+                            text: 'Activity Analysis — Most Active Categories',
+                            color: '#ddeeff',
+                            font: { size: 13, weight: 'bold' }
+                        }
+                    },
+                    scales: {
+                        x: { ticks: { color: '#4a6a88', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                        y: { ticks: { color: '#4a6a88', stepSize: 1 }, grid: { color: 'rgba(255,255,255,0.05)' } }
+                    }
+                }
+            });
+        });
+    }
+
+    // ── PDF Generator ────────────────────────────────────────────
+    async function generatePDF() {
+        const btn = document.querySelector('.modal-generate');
+        btn.textContent = '⏳ Building…';
+        btn.disabled = true;
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+        const auditLog = JSON.parse(localStorage.getItem('auditLog')) || [];
+        const actions  = JSON.parse(localStorage.getItem('actions'))  || [];
+        const meetings = JSON.parse(localStorage.getItem('meetings'))  || [];
+
+        const now = new Date();
+        const dateStr = now.toLocaleDateString('en-GB', {day:'2-digit', month:'short', year:'numeric'}).toUpperCase();
+        const timeStr = now.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
+
+        const doAll      = selectedOptions.has('all');
+        const doTasks    = doAll || selectedOptions.has('tasks');
+        const doMeetings = doAll || selectedOptions.has('meetings');
+        const doAudit    = doAll || selectedOptions.has('audit');
+        const doChart    = doAll || selectedOptions.has('chart');
+
+        // Colours (as hex for jsPDF)
+        const C_BG      = [5, 8, 15];
+        const C_CARD    = [13, 21, 40];
+        const C_ACCENT  = [41, 170, 255];
+        const C_SAFE    = [0, 229, 160];
+        const C_URGENT  = [255, 45, 85];
+        const C_WARN    = [255, 198, 0];
+        const C_MUTED   = [74, 106, 136];
+        const C_TEXT    = [221, 238, 255];
+        const C_MANUAL  = [185, 124, 255];
+
+        const pw = 210; // page width mm
+        const ph = 297; // page height mm
+        const ml = 14;  // margin left
+        const mr = 14;  // margin right
+        const cw = pw - ml - mr; // content width
+        let y = 0;
+
+        function newPage() {
+            doc.addPage();
+            // Background
+            doc.setFillColor(...C_BG);
+            doc.rect(0, 0, pw, ph, 'F');
+            y = 20;
+        }
+
+        function checkY(needed) {
+            if (y + needed > ph - 20) newPage();
+        }
+
+        // ── Cover ──
+        doc.setFillColor(...C_BG);
+        doc.rect(0, 0, pw, ph, 'F');
+
+        // Accent line
+        doc.setFillColor(...C_ACCENT);
+        doc.rect(0, 0, 3, ph, 'F');
+
+        // Title block
+        y = 40;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        doc.setTextColor(...C_MUTED);
+        doc.text('CNS PORTAL  ·  DIRECTOR\'S BRIEF', ml, y);
+        y += 14;
+
+        doc.setFontSize(28);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...C_TEXT);
+        doc.text('Operations', ml, y);
+        y += 10;
+        doc.setTextColor(...C_ACCENT);
+        doc.text('Report', ml, y);
+        y += 16;
+
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(...C_MUTED);
+        doc.text(`Generated: ${dateStr}  ·  ${timeStr}`, ml, y);
+        y += 30;
+
+        // KPI summary boxes
+        const kpiData = [
+            { label: 'Pending Tasks', val: actions.length, color: C_ACCENT },
+            { label: 'Meetings', val: meetings.length, color: C_SAFE },
+            { label: 'Critical', val: actions.filter(a=>a.prio==='Critical').length, color: C_URGENT },
+            { label: 'Log Entries', val: auditLog.length, color: C_MANUAL },
+        ];
+        const kw = (cw - 9) / 4;
+        kpiData.forEach((k, i) => {
+            const x = ml + i * (kw + 3);
+            doc.setFillColor(...C_CARD);
+            doc.roundedRect(x, y, kw, 22, 3, 3, 'F');
+            doc.setFillColor(...k.color);
+            doc.rect(x, y, kw, 1.5, 'F');
+            doc.setFontSize(18);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(...k.color);
+            doc.text(String(k.val), x + kw/2, y + 12, { align: 'center' });
+            doc.setFontSize(7);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(...C_MUTED);
+            doc.text(k.label, x + kw/2, y + 18, { align: 'center' });
+        });
+        y += 32;
+
+        // ── Analysis Chart ──
+        if (doChart) {
+            checkY(80);
+            doc.setFillColor(...C_CARD);
+            doc.roundedRect(ml, y, cw, 8, 2, 2, 'F');
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(...C_ACCENT);
+            doc.text('ACTIVITY ANALYSIS', ml + 4, y + 5.5);
+            y += 12;
+
+            try {
+                const chartImg = await buildChartImage();
+                const imgH = (cw * 300) / 500;
+                checkY(imgH + 5);
+                doc.addImage(chartImg, 'PNG', ml, y, cw, imgH);
+                y += imgH + 8;
+            } catch(e) {
+                doc.setTextColor(...C_MUTED);
+                doc.text('Chart unavailable', ml, y + 5);
+                y += 12;
+            }
+        }
+
+        // ── Tasks ──
+        if (doTasks && actions.length > 0) {
+            checkY(20);
+            doc.setFillColor(...C_CARD);
+            doc.roundedRect(ml, y, cw, 8, 2, 2, 'F');
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(...C_ACCENT);
+            doc.text('PENDING TASKS', ml + 4, y + 5.5);
+            y += 12;
+
+            actions.forEach((a, i) => {
+                checkY(14);
+                const prioColor = a.prio === 'Critical' ? C_URGENT : a.prio === 'High' ? C_WARN : a.prio === 'Medium' ? C_ACCENT : C_MUTED;
+                doc.setFillColor(...C_CARD);
+                doc.roundedRect(ml, y, cw, 11, 2, 2, 'F');
+                doc.setFillColor(...prioColor);
+                doc.circle(ml + 5, y + 5.5, 1.5, 'F');
+                doc.setFontSize(8.5);
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(...C_TEXT);
+                const taskText = doc.splitTextToSize(a.text || '—', cw - 40);
+                doc.text(taskText[0], ml + 10, y + 5.5);
+                doc.setFontSize(7);
+                doc.setFont('helvetica', 'normal');
+                doc.setTextColor(...prioColor);
+                doc.text(a.prio || '—', ml + cw - 3, y + 5.5, { align: 'right' });
+                doc.setTextColor(...C_MUTED);
+                doc.text(a.owner || '—', ml + 10, y + 9);
+                y += 13;
+            });
+            y += 4;
+        }
+
+        // ── Meetings ──
+        if (doMeetings && meetings.length > 0) {
+            checkY(20);
+            doc.setFillColor(...C_CARD);
+            doc.roundedRect(ml, y, cw, 8, 2, 2, 'F');
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(...C_SAFE);
+            doc.text('MEETINGS', ml + 4, y + 5.5);
+            y += 12;
+
+            meetings.sort((a,b) => a.date > b.date ? 1 : -1).forEach(m => {
+                checkY(14);
+                doc.setFillColor(...C_CARD);
+                doc.roundedRect(ml, y, cw, 11, 2, 2, 'F');
+                doc.setFillColor(...C_SAFE);
+                doc.circle(ml + 5, y + 5.5, 1.5, 'F');
+                doc.setFontSize(8.5);
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(...C_TEXT);
+                doc.text(m.title || '—', ml + 10, y + 5.5);
+                doc.setFontSize(7);
+                doc.setFont('helvetica', 'normal');
+                doc.setTextColor(...C_MUTED);
+                doc.text(`${m.date || '—'}  ·  ${m.time || '--:--'}  ·  ${m.owner || '—'}`, ml + 10, y + 9);
+                y += 13;
+            });
+            y += 4;
+        }
+
+        // ── Audit Log ──
+        if (doAudit && auditLog.length > 0) {
+            checkY(20);
+            doc.setFillColor(...C_CARD);
+            doc.roundedRect(ml, y, cw, 8, 2, 2, 'F');
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(...C_MANUAL);
+            doc.text('AUDIT LOG', ml + 4, y + 5.5);
+            y += 12;
+
+            auditLog.slice().reverse().forEach(e => {
+                checkY(14);
+                const eColor = e.type === 'Action' ? C_ACCENT : e.type === 'Meeting' ? C_SAFE : C_MANUAL;
+                doc.setFillColor(...C_CARD);
+                doc.roundedRect(ml, y, cw, 11, 2, 2, 'F');
+                doc.setFillColor(...eColor);
+                doc.circle(ml + 5, y + 5.5, 1.5, 'F');
+                doc.setFontSize(8);
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(...C_TEXT);
+                const entryText = doc.splitTextToSize((e.text || '—').replace(/^(ACTION ADDED:|ACTION COMPLETED:|MEETING SCHEDULED:|MEETING REMOVED:|MANUAL:)\s*/i,''), cw - 30);
+                doc.text(entryText[0], ml + 10, y + 5.5);
+                doc.setFontSize(6.5);
+                doc.setFont('helvetica', 'normal');
+                doc.setTextColor(...C_MUTED);
+                doc.text(`${e.date || '—'}  ·  ${e.time || '--:--'}`, ml + 10, y + 9);
+                doc.setTextColor(...eColor);
+                doc.text(e.type || 'LOG', ml + cw - 3, y + 5.5, { align: 'right' });
+                y += 13;
+            });
+        }
+
+        // Footer on last page
+        const totalPages = doc.getNumberOfPages();
+        for (let p = 1; p <= totalPages; p++) {
+            doc.setPage(p);
+            doc.setFillColor(...C_ACCENT);
+            doc.rect(0, ph - 1.5, pw, 1.5, 'F');
+            doc.setFontSize(6.5);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(...C_MUTED);
+            doc.text(`CNS DIRECTOR'S BRIEF  ·  ${dateStr}`, ml, ph - 5);
+            doc.text(`PAGE ${p} / ${totalPages}`, pw - mr, ph - 5, { align: 'right' });
+        }
+
+        doc.save(`CNS_Report_${dateStr.replace(/ /g,'_')}.pdf`);
+
+        btn.textContent = '⬇ Generate PDF';
+        btn.disabled = false;
+        closeReportModal();
+    }
 </script>
 
 </body>
